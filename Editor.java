@@ -3,12 +3,14 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.FileReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.Arrays;
 import java.util.Scanner;
 import java.util.LinkedList;
 import java.util.Queue;
+import java.io.FileNotFoundException;
 
 public class Editor{
 	private static int WIDTH;
@@ -16,7 +18,7 @@ public class Editor{
 	private static boolean isClosed = false;
 	private static char[][] inputArr;
 	private static final Scanner inputScanner = new Scanner(System.in);
-	private static String fileLine;
+	private static String fileLine = "";
 	private static String writeLine;
 	private static Queue<char[]> inputBuffer = new LinkedList<>();
 	private static char[] inputText;
@@ -64,19 +66,31 @@ public class Editor{
 					printInputArr();
 					break;
 				case "save":
-					System.out.print("Enter filename: ");
+					System.out.println("Enter filename: ");
+					inputScanner.nextLine();
 					fileLine = inputScanner.nextLine();
-					try (BufferedWriter writer = new BufferedWriter(new FileWriter(fileLine))){
-						String text = String.valueOf(inputArr);
+					try {
+						BufferedWriter writer = new BufferedWriter(new FileWriter(".temp.txt"));
+						String text = "";
+						for(int i = 0; i < inputArr.length; i++){
+							for(int j = 0; j < inputArr[i].length; j++){
+								text += Character.toString(inputArr[i][j]);
+							}
+						}
 						writer.write(text);
-					}catch(IOException e){
-						System.err.println("Error writing to file: " + e.getMessage());
-					}
+						writer.close();
+						if(!fileLine.equals("")){
+						executeSaveCommands(fileLine);}
+					}catch(IOException | InterruptedException e){
+						System.err.println("Error executing command: " + e.getMessage());}
+					
 					break;
 				case "open":
-					System.out.print("Enter filename: ");
+					System.out.println("Enter filename: ");
+					inputScanner.nextLine();
 					fileLine = inputScanner.nextLine();
-					try(BufferedReader reader = new BufferedReader(new FileReader(fileLine))){
+					try{
+						BufferedReader reader = new BufferedReader(new FileReader(fileLine));
 						String line;
 						while ((line = reader.readLine()) != null){
 							char[] charArr = line.toCharArray();
@@ -95,6 +109,16 @@ public class Editor{
 				
 			}
 		}
+	private static void executeSaveCommands(String fileLine) throws IOException, InterruptedException{
+		String touchCommand = String.format("touch %s", fileLine);
+						String catCommand = String.format("cat .temp.txt >> %s", fileLine);
+						String[] commands = {touchCommand, catCommand};
+						for(String fcommand: commands){
+						Process process = Runtime.getRuntime().exec(new String[]{"bash", "-c", fcommand});
+						//System.out.printf("Command complete: %s\n", fcommand);
+						int exitCode = process.waitFor();}
+
+	}
 	private static void parseInputToInputArray(){
 		int rowsNeeded = inputBuffer.size();
 		System.out.println(rowsNeeded);

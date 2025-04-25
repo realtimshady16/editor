@@ -3,12 +3,14 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.FileReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.Arrays;
 import java.util.Scanner;
 import java.util.LinkedList;
 import java.util.Queue;
+import java.io.FileNotFoundException;
 
 public class Editor{
 	private static int WIDTH;
@@ -16,7 +18,7 @@ public class Editor{
 	private static boolean isClosed = false;
 	private static char[][] inputArr;
 	private static final Scanner inputScanner = new Scanner(System.in);
-	private static String fileLine;
+	private static String fileLine = "";
 	private static String writeLine;
 	private static Queue<char[]> inputBuffer = new LinkedList<>();
 	private static char[] inputText;
@@ -64,19 +66,31 @@ public class Editor{
 					printInputArr();
 					break;
 				case "save":
-					System.out.print("Enter filename: ");
+					System.out.println("Enter filename: ");
+					inputScanner.nextLine();
 					fileLine = inputScanner.nextLine();
-					try (BufferedWriter writer = new BufferedWriter(new FileWriter(fileLine))){
-						String text = String.valueOf(inputArr);
+					try {
+						BufferedWriter writer = new BufferedWriter(new FileWriter(".temp.txt", false));
+						String text = "";
+						for(int i = 0; i < inputArr.length; i++){
+							for(int j = 0; j < inputArr[i].length; j++){
+								text += Character.toString(inputArr[i][j]);
+							}
+						}
 						writer.write(text);
-					}catch(IOException e){
-						System.err.println("Error writing to file: " + e.getMessage());
-					}
+						writer.close();
+						if(!fileLine.equals("")){
+						executeSaveCommands(fileLine);}
+					}catch(IOException | InterruptedException e){
+						System.err.println("Error executing command: " + e.getMessage());}
+					
 					break;
 				case "open":
-					System.out.print("Enter filename: ");
+					System.out.println("Enter filename: ");
+					inputScanner.nextLine();
 					fileLine = inputScanner.nextLine();
-					try(BufferedReader reader = new BufferedReader(new FileReader(fileLine))){
+					try{
+						BufferedReader reader = new BufferedReader(new FileReader(fileLine));
 						String line;
 						while ((line = reader.readLine()) != null){
 							char[] charArr = line.toCharArray();
@@ -85,8 +99,8 @@ public class Editor{
 					}catch(IOException e){
 						System.err.println("Error reading from file: " + e.getMessage());
 					}
-					//parseInputToInputArray(fileTextBuffer);
-					//printInputArr();
+					parseFileBufferToInputArray();
+					printInputArr();
 					break;
 				default:
 					printInputArr();
@@ -95,16 +109,24 @@ public class Editor{
 				
 			}
 		}
-	private static void parseInputToInputArray(){
+	private static void executeSaveCommands(String fileLine) throws IOException, InterruptedException{
+		String touchCommand = String.format("touch %s", fileLine);
+						String catCommand = String.format("cat .temp.txt >> %s", fileLine);
+						String[] commands = {touchCommand, catCommand};
+						for(String fcommand: commands){
+						Process process = Runtime.getRuntime().exec(new String[]{"bash", "-c", fcommand});
+						//System.out.printf("Command complete: %s\n", fcommand);
+						int exitCode = process.waitFor();}
+
+	}
+	private static synchronized void parseInputToInputArray(){
 		int rowsNeeded = inputBuffer.size();
-		System.out.println(rowsNeeded);
 		int rows = rowsNeeded == 0 ? 1 : rowsNeeded;
 		int start = lastPos;
-		System.out.println(start);
 		while(inputBuffer.peek() != null){
 			char[] inputText = inputBuffer.poll();
 			for(int k = 0; k < inputText.length; k++){
-				if(k % WIDTH == 0){
+				if(k % WIDTH == 0 && start != 0){
 					start++;
 					inputArr[start][k % WIDTH] = inputText[k];
 				}
@@ -115,9 +137,25 @@ public class Editor{
 			}
 		lastPos += start;
 		}
-			
-	private static void printInputArr(){
-		assert !Arrays.stream(inputArr).flatMapToInt(arr -> IntStream.range(0, arr.length).map(i-> arr[i])).allMatch(x -> x == '\0');
+	private static synchronized void parseFileBufferToInputArray(){
+		int rowsNeeded = fileTextBuffer.size();
+		assert rowsNeeded != 0;
+		System.out.println(rowsNeeded);
+		int rows = rowsNeeded == 0 ? 1 : rowsNeeded;
+		int start = 0; //lastPos;
+		assert fileTextBuffer.peek() != null;
+		while(fileTextBuffer.peek() != null){
+			char[] inputText = fileTextBuffer.poll();
+			//for(int k = 0; k < inputText.length; k++){
+			//if(k % WIDTH == 0 && start != 0){
+			inputArr[start] = inputText;
+			start++;
+				}
+
+		lastPos += start;
+			}
+	private static synchronized void printInputArr(){
+		assert !Arrays.stream(inputArr).flatMapToInt(arr -> IntStream.range(0, arr.length).map(i-> arr[i])).allMatch(x -> x == '\0'); //checks that there is at least one non-null character in inputArr. If all characters are null, raise AssertionError
 		for(int i = 0; i < HEIGHT -1; i++){
 			System.out.print(Integer.toString(i)+ " ");
 			for(int j = 0; j < WIDTH; j++)

@@ -70,7 +70,7 @@ public class Editor{
 					inputScanner.nextLine();
 					fileLine = inputScanner.nextLine();
 					try {
-						BufferedWriter writer = new BufferedWriter(new FileWriter(".temp.txt"));
+						BufferedWriter writer = new BufferedWriter(new FileWriter(".temp.txt", false));
 						String text = "";
 						for(int i = 0; i < inputArr.length; i++){
 							for(int j = 0; j < inputArr[i].length; j++){
@@ -95,10 +95,6 @@ public class Editor{
 						while ((line = reader.readLine()) != null){
 							char[] charArr = line.toCharArray();
 							fileTextBuffer.add(charArr);
-						}
-						System.out.println("-----fileTextBuffer before parsing----");
-						for(char[] charArr: fileTextBuffer){
-							System.out.println(Arrays.toString(charArr));
 						}
 					}catch(IOException e){
 						System.err.println("Error reading from file: " + e.getMessage());
@@ -130,7 +126,7 @@ public class Editor{
 		while(inputBuffer.peek() != null){
 			char[] inputText = inputBuffer.poll();
 			for(int k = 0; k < inputText.length; k++){
-				if(k % WIDTH == 0){
+				if(k % WIDTH == 0 && start != 0){
 					start++;
 					inputArr[start][k % WIDTH] = inputText[k];
 				}
@@ -147,23 +143,17 @@ public class Editor{
 		System.out.println(rowsNeeded);
 		int rows = rowsNeeded == 0 ? 1 : rowsNeeded;
 		int start = 0; //lastPos;
-		while(inputBuffer.peek() != null){
+		assert fileTextBuffer.peek() != null;
+		while(fileTextBuffer.peek() != null){
 			char[] inputText = fileTextBuffer.poll();
-			for(int k = 0; k < inputText.length; k++){
-				if(k % WIDTH == 0){
-					start++;
-					inputArr[start][k % WIDTH] = inputText[k];
-					System.out.println(inputArr[start][k%WIDTH]);
+			//for(int k = 0; k < inputText.length; k++){
+			//if(k % WIDTH == 0 && start != 0){
+			inputArr[start] = inputText;
+			start++;
 				}
-				else{
-					inputArr[start][k % WIDTH] = inputText[k];
-					System.out.println(inputArr[start][k%WIDTH]);
-				}
+
+		lastPos += start;
 			}
-			}
-		//lastPos += start;
-		}
-				
 	private static synchronized void printInputArr(){
 		assert !Arrays.stream(inputArr).flatMapToInt(arr -> IntStream.range(0, arr.length).map(i-> arr[i])).allMatch(x -> x == '\0'); //checks that there is at least one non-null character in inputArr. If all characters are null, raise AssertionError
 		for(int i = 0; i < HEIGHT -1; i++){
